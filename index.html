@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Maze Adventure Enhanced</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+        }
+        #maze {
+            display: inline-grid;
+            gap: 1px;
+            background-color: #16213e;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            border-radius: 3px;
+        }
+        .wall { background-color: #0f3460; }
+        .path { background-color: #16213e; }
+        .player { background-color: #e94560; transition: background-color 0.3s ease; }
+        .exit { background-color: #00ff00; }
+        .hadamard { background-color: #ff00ff; }
+        .quantum-tunnel { background-color: #00ffff; }
+        .pauli-x { background-color: #ffa500; }
+        .pauli-z { background-color: #0000ff; }
+        .entangled { background-color: #ff5733; }
+        #controls button {
+            margin: 5px;
+            padding: 10px;
+            background-color: #0f3460;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #controls button:hover {
+            background-color: #e94560;
+        }
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        #health-bar {
+            margin-top: 15px;
+            width: 100%;
+            background-color: #333;
+            border-radius: 5px;
+        }
+        #health {
+            width: 100%;
+            height: 20px;
+            background-color: #00ff00;
+            border-radius: 5px;
+        }
+        #points {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quantum Maze Adventure Enhanced</h1>
+        <div id="maze"></div>
+        <div id="controls">
+            <button id="up">Up</button>
+            <button id="left">Left</button>
+            <button id="right">Right</button>
+            <button id="down">Down</button>
+            <button id="measure">Measure</button>
+        </div>
+        <div id="health-bar">
+            <div id="health"></div>
+        </div>
+        <div id="points">Points: 0</div>
+        <div id="message"></div>
+    </div>
+    <script>
+        // Maze generation parameters
+        const mazeSize = 10;
+        const wallDensity = 0.3; // Density of walls in the maze
+        const maze = generateRandomMaze(mazeSize, mazeSize, wallDensity);
+
+        // Player positions and state variables
+        const playerPositions = [{x: 1, y: 0}];
+        let inSuperposition = false;
+        let health = 100;
+        let points = 0;
+
+        const mazeElement = document.getElementById('maze');
+        const messageElement = document.getElementById('message');
+        const healthElement = document.getElementById('health');
+        const pointsElement = document.getElementById('points');
+
+        // Render the random maze with player
+        renderMaze();
+
+        // Generate random maze
+        function generateRandomMaze(rows, cols, wallDensity) {
+            const maze = Array.from({ length: rows }, () => Array.from({ length: cols }, () => (Math.random() < wallDensity ? 1 : 0)));
+            maze[1][0] = 0; // Ensure player start position
+            maze[rows - 1][cols - 2] = 4; // Ensure exit position
+            maze[rows - 2][cols - 2] = 3; // Add a quantum tunnel near the exit
+            maze[Math.floor(Math.random() * rows)][Math.floor(Math.random() * cols)] = 2; // Random Hadamard gate
+            return maze;
+        }
+
+        // Render the maze and player on the grid
+        function renderMaze() {
+            mazeElement.innerHTML = '';
+            mazeElement.style.gridTemplateColumns = `repeat(${maze[0].length}, 30px)`;
+            
+            maze.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const cellElement = document.createElement('div');
+                    cellElement.classList.add('cell');
+                    
+                    if (cell === 1) cellElement.classList.add('wall');
+                    else if (cell === 2) cellElement.classList.add('hadamard');
+                    else if (cell === 3) cellElement.classList.add('quantum-tunnel');
+                    else if (cell === 4) cellElement.classList.add('exit');
+                    else cellElement.classList.add('path');
+                    
+                    if (playerPositions.some(pos => pos.x === x && pos.y === y)) {
+                        cellElement.classList.add('player');
+                    }
+                    
+                    mazeElement.appendChild(cellElement);
+                });
+            });
+        }
+
+        // Handle player movement and special events
+        function move(dx, dy) {
+            if (inSuperposition) {
+                messageElement.textContent = "Player is in superposition. Measure first!";
+                return;
+            }
+            
+            const newPositions = playerPositions.map(pos => ({
+                x: pos.x + dx,
+                y: pos.y + dy
+            }));
+            
+            if (newPositions.every(pos => 
+                pos.x >= 0 && pos.x < maze[0].length &&
+                pos.y >= 0 && pos.y < maze.length &&
+                maze[pos.y][pos.x] !== 1
+            )) {
+                playerPositions[0] = newPositions[0];
+                points += 10; // Award points for each move
+                pointsElement.textContent = `Points: ${points}`;
+                checkSpecialCells();
+                renderMaze();
+                decreaseHealth();
+            }
+        }
+
+        // Check for quantum gates and other special cells
+        function checkSpecialCells() {
+            playerPositions.forEach(pos => {
+                const cell = maze[pos.y][pos.x];
+                if (cell === 2) { // Hadamard gate
+                    inSuperposition = true;
+                    playerPositions.push({x: Math.floor(Math.random() * mazeSize), y: Math.floor(Math.random() * mazeSize)});
+                    messageElement.textContent = "Entered superposition state!";
+                    points += 50; // Award points for using Hadamard gate
+                } else if (cell === 3) { // Quantum tunnel
+                    playerPositions[0] = {x: 8, y: 9}; // Teleport to near exit
+                    messageElement.textContent = "Quantum tunneled!";
+                    points += 100; // Award points for using quantum tunnel
+                } else if (cell === 4) { // Exit
+                    messageElement.textContent = `Congratulations! You've escaped the maze with ${points} points!`;
+                }
+            });
+        }
+
+        // Measure superposition to collapse into one position
+        function measure() {
+            if (inSuperposition) {
+                playerPositions.length = 1; // Collapse to one position
+                inSuperposition = false;
+                messageElement.textContent = "Superposition collapsed!";
+                renderMaze();
+            } else {
+                messageElement.textContent = "Player is not in superposition.";
+            }
+        }
+
+        // Decrease health on each move
+        function decreaseHealth() {
+            health -= 5;
+            healthElement.style.width = `${health}%`;
+            if (health <= 0) {
+                messageElement.textContent = "Game Over! You've lost all health.";
+                disableControls();
+            }
+        }
+
+        // Disable game controls
+        function disableControls() {
+            document.getElementById('up').disabled = true;
+            document.getElementById('left').disabled = true;
+            document.getElementById('right').disabled = true;
+            document.getElementById('down').disabled = true;
+            document.getElementById('measure').disabled = true;
+        }
+
+        // Add event listeners for movement and measurement
+        document.getElementById('up').addEventListener('click', () => move(0, -1));
+        document.getElementById('left').addEventListener('click', () => move(-1, 0));
+        document.getElementById('right').addEventListener('click', () => move(1, 0));
+        document.getElementById('down').addEventListener('click', () => move(0, 1));
+        document.getElementById('measure').addEventListener('click', measure);
+    </script>
+</body>
+</html>
